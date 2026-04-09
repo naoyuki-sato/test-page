@@ -14,21 +14,21 @@
       font-family: Helvetica, 'Helvetica Neue', 'Mplus 1p', 'Hiragino Kaku Gothic Pro', 'ヒラギノ角ゴ Pro W3', Meiryo, メイリオ, Osaka, 'MS PGothic' !important;
       font-size: 16px;
     }
+
+    h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
+      font-family: Helvetica, 'Helvetica Neue', 'Mplus 1p', 'Hiragino Kaku Gothic Pro', 'ヒラギノ角ゴ Pro W3', Meiryo, メイリオ, Osaka, 'MS PGothic' !important;
+    }
+
     div.app {
       margin: 20px;
       padding: 20px;
-    }
-    /* スマホで見やすくするための調整 */
-    .table-container {
-      overflow-x: auto;
     }
   </style>
 </head>
 
 <body class="hold-transition fixed skin-blue-light sidebar-mini ">
-  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
   <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
-
   <div class="wrapper">
     <div class="container">
       <div class="row">
@@ -36,18 +36,17 @@
           <div id="app">
             <br>
             <div>
-              <h4>朝6 予定表(多摩川 6-8時)</h4>
+              <h4> 朝6 予定表(多摩川 6-8時)</h4>
             </div>
-
             <section v-if="errored">
-              <p>データの読み込みに失敗しました。後ほど再度お試しください。</p>
+              <p>We're sorry, we're not able to retrieve this information at the moment, please try back later</p>
             </section>
 
             <section v-else>
               <div v-if="loading">Loading...</div>
 
-              <div v-else class="table-container">
-                <table class="table table-striped">
+              <div v-else>
+                <table class="table">
                   <thead>
                     <tr>
                       <th>日程</th>
@@ -57,7 +56,7 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="(item, index) in items" :key="index">
+                    <tr v-for="item in items">
                       <td>{{ item.date }}</td>
                       <td>{{ item.court }}</td>
                       <td>{{ item.name }}</td>
@@ -65,9 +64,7 @@
                     </tr>
                   </tbody>
                 </table>
-                <div class="text-right">
-                   <small>データ取得日: {{ update }}</small>
-                </div>
+                更新日({{update}})
               </div>
             </section>
           </div>
@@ -75,7 +72,6 @@
       </div>
     </div>
   </div>
-
   <script>
     new Vue({
       el: '#app',
@@ -84,44 +80,35 @@
           update: null,
           loading: true,
           errored: false,
-          items: []
+          items: null
         };
+
       },
       mounted() {
-        // 同じリポジトリ内のdata.jsonを取得
-        axios.get("./data.json")
-          .then(response => {
-            const rawData = response.data;
-            
-            if (Array.isArray(rawData) && rawData.length > 1) {
-              // 1行目が ["date","court","name","memo"] のようなヘッダーであることを想定
-              // 2行目以降をオブジェクトの配列に変換
-              const headers = rawData;
-              this.items = rawData.slice(1).map(row => {
-                return {
-                  date: row || '',
-                  court: row || '',
-                  name: row || '',
-                  memo: row || ''
-                };
-              });
-            }
-
-            // 更新日の表示（現在はアクセスした日時を表示）
-            const now = new Date();
-            this.update = now.toLocaleString('ja-JP', {
-              year: 'numeric', month: '2-digit', day: '2-digit',
-              hour: '2-digit', minute: '2-digit', hour12: false
-            });
-
-          })
-          .catch(error => {
-            console.error(error);
+        axios.
+          get("data.json").
+          then(response => {
+            const options = {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false,
+              timeZone: 'Asia/Tokyo'
+            };
+            // 取得時の時刻を表示
+            this.update = new Date().toLocaleDateString('ja-JP', options);
+            this.items = response.data;
+          }).
+          catch(error => {
+            console.log(error);
             this.errored = true;
-          })
-          .finally(() => this.loading = false);
+          }).
+          finally(() => this.loading = false);
       }
     });
   </script>
 </body>
+
 </html>
