@@ -1,73 +1,127 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ja" lang="ja">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>テニススケジュール</title>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-    <style>
-        body { font-family: sans-serif; background: #f8f9fa; padding: 20px; color: #333; }
-        h1 { font-size: 1.5rem; text-align: center; }
-        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
-        th { background-color: #4CAF50; color: white; font-weight: bold; }
-        tr:last-child td { border-bottom: none; }
-        tr:nth-child(even) { background-color: #fcfcfc; }
-        .loading { text-align: center; padding: 20px; }
-    </style>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <title>朝6 予定表</title>
+  <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.1/css/all.css">
+  <style type="text/css">
+    body {
+      font-family: Helvetica, 'Helvetica Neue', 'Mplus 1p', 'Hiragino Kaku Gothic Pro', 'ヒラギノ角ゴ Pro W3', Meiryo, メイリオ, Osaka, 'MS PGothic' !important;
+      font-size: 16px;
+    }
+    div.app {
+      margin: 20px;
+      padding: 20px;
+    }
+    /* スマホで見やすくするための調整 */
+    .table-container {
+      overflow-x: auto;
+    }
+  </style>
 </head>
-<body>
-    <div id="app">
-        <h1>テニススケジュール</h1>
-        
-        <div v-if="loading" class="loading">読み込み中...</div>
-        
-        <table v-else>
-            <thead>
-                <tr>
-                    <th v-for="header in headers" :key="header">{{ header }}</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="(row, index) in rows" :key="index">
-                    <td v-for="(cell, cellIndex) in row" :key="cellIndex">
-                        {{ cell }}
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+
+<body class="hold-transition fixed skin-blue-light sidebar-mini ">
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+  <div class="wrapper">
+    <div class="container">
+      <div class="row">
+        <div class="col-xs-12">
+          <div id="app">
+            <br>
+            <div>
+              <h4>朝6 予定表(多摩川 6-8時)</h4>
+            </div>
+
+            <section v-if="errored">
+              <p>データの読み込みに失敗しました。後ほど再度お試しください。</p>
+            </section>
+
+            <section v-else>
+              <div v-if="loading">Loading...</div>
+
+              <div v-else class="table-container">
+                <table class="table table-striped">
+                  <thead>
+                    <tr>
+                      <th>日程</th>
+                      <th>コート</th>
+                      <th>予約者</th>
+                      <th>メモ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(item, index) in items" :key="index">
+                      <td>{{ item.date }}</td>
+                      <td>{{ item.court }}</td>
+                      <td>{{ item.name }}</td>
+                      <td>{{ item.memo }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div class="text-right">
+                   <small>データ取得日: {{ update }}</small>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
     </div>
+  </div>
 
-    <script>
-        const { createApp, ref, onMounted } = Vue;
-
-        createApp({
-            setup() {
-                const headers = ref([]);
-                const rows = ref([]);
-                const loading = ref(true);
-
-                onMounted(async () => {
-                    try {
-                        const response = await fetch('./data.json');
-                        const data = await response.json();
-                        
-                        if (data.length > 0) {
-                            // 最初の行をヘッダーとして抽出
-                            headers.value = data;
-                            // 2行目以降をデータとして抽出
-                            rows.value = data.slice(1);
-                        }
-                    } catch (e) {
-                        console.error("データの読み込みに失敗しました", e);
-                    } finally {
-                        loading.value = false;
-                    }
-                });
-
-                return { headers, rows, loading };
+  <script>
+    new Vue({
+      el: '#app',
+      data() {
+        return {
+          update: null,
+          loading: true,
+          errored: false,
+          items: []
+        };
+      },
+      mounted() {
+        // 同じリポジトリ内のdata.jsonを取得
+        axios.get("./data.json")
+          .then(response => {
+            const rawData = response.data;
+            
+            if (Array.isArray(rawData) && rawData.length > 1) {
+              // 1行目が ["date","court","name","memo"] のようなヘッダーであることを想定
+              // 2行目以降をオブジェクトの配列に変換
+              const headers = rawData;
+              this.items = rawData.slice(1).map(row => {
+                return {
+                  date: row || '',
+                  court: row || '',
+                  name: row || '',
+                  memo: row || ''
+                };
+              });
             }
-        }).mount('#app');
-    </script>
+
+            // 更新日の表示（現在はアクセスした日時を表示）
+            const now = new Date();
+            this.update = now.toLocaleString('ja-JP', {
+              year: 'numeric', month: '2-digit', day: '2-digit',
+              hour: '2-digit', minute: '2-digit', hour12: false
+            });
+
+          })
+          .catch(error => {
+            console.error(error);
+            this.errored = true;
+          })
+          .finally(() => this.loading = false);
+      }
+    });
+  </script>
 </body>
 </html>
