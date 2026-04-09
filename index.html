@@ -3,23 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test Page</title>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <title>テニススケジュール</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <style>
-        body { font-family: sans-serif; background: #f4f4f4; padding: 20px; }
-        .card { background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        body { font-family: sans-serif; background: #f8f9fa; padding: 20px; color: #333; }
+        h1 { font-size: 1.5rem; text-align: center; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
+        th { background-color: #4CAF50; color: white; font-weight: bold; }
+        tr:last-child td { border-bottom: none; }
+        tr:nth-child(even) { background-color: #fcfcfc; }
+        .loading { text-align: center; padding: 20px; }
     </style>
 </head>
 <body>
     <div id="app">
-        <h1>テニス情報リスト</h1>
-        <div v-if="loading">読み込み中...</div>
-        <div v-else>
-            <div v-for="item in items" :key="item.id" class="card">
-                <h3>{{ item.title }}</h3>
-                <p>{{ item.description }}</p>
-            </div>
-        </div>
+        <h1>テニススケジュール</h1>
+        
+        <div v-if="loading" class="loading">読み込み中...</div>
+        
+        <table v-else>
+            <thead>
+                <tr>
+                    <th v-for="header in headers" :key="header">{{ header }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="(row, index) in rows" :key="index">
+                    <td v-for="(cell, cellIndex) in row" :key="cellIndex">
+                        {{ cell }}
+                    </td>
+                </tr>
+            </tbody>
+        </table>
     </div>
 
     <script>
@@ -27,14 +43,21 @@
 
         createApp({
             setup() {
-                const items = ref([]);
+                const headers = ref([]);
+                const rows = ref([]);
                 const loading = ref(true);
 
                 onMounted(async () => {
                     try {
-                        // 同じリポジトリのdata.jsonを読み込む
                         const response = await fetch('./data.json');
-                        items.value = await response.json();
+                        const data = await response.json();
+                        
+                        if (data.length > 0) {
+                            // 最初の行をヘッダーとして抽出
+                            headers.value = data;
+                            // 2行目以降をデータとして抽出
+                            rows.value = data.slice(1);
+                        }
                     } catch (e) {
                         console.error("データの読み込みに失敗しました", e);
                     } finally {
@@ -42,7 +65,7 @@
                     }
                 });
 
-                return { items, loading };
+                return { headers, rows, loading };
             }
         }).mount('#app');
     </script>
